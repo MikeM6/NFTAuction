@@ -1,6 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+// Chainlink AggregatorV3 minimal interface
+interface AggregatorV3Interface {
+    function decimals() external view returns (uint8);
+    function latestRoundData()
+        external
+        view
+        returns (
+            uint80 roundId,
+            int256 answer,
+            uint256 startedAt,
+            uint256 updatedAt,
+            uint80 answeredInRound
+        );
+}
+
 // ERC20 can mint token
 interface IERC20Minimal {
     function transfer(address to, uint256 amount) external returns (bool);
@@ -9,6 +24,11 @@ interface IERC20Minimal {
         address to,
         uint256 amount
     ) external returns (bool);
+}
+
+// ERC20 metadata (decimals)
+interface IERC20MetadataMinimal {
+    function decimals() external view returns (uint8);
 }
 
 // ERC721 can mint token vs NFT
@@ -40,6 +60,11 @@ contract Auction is IERC721Receiver {
     uint256 public immutable startingPrice;
     uint64 public immutable endTime;
 
+    // Optional Chainlink price feeds for USD conversion
+    // Set by seller via setPriceFeeds(). If unset, USD view functions will revert.
+    address public ethUsdFeed; // ETH/USD data feed
+    address public tokenUsdFeed; // currency/USD data feed (when currency != ETH)
+
     bool public ended;
     bool private receivedNft;
 
@@ -50,6 +75,9 @@ contract Auction is IERC721Receiver {
 
     event BidPlaced(address indexed bidder, uint256 amount);
     event AuctionEnded(address indexed winner, uint256 amount);
+
+    // Emitted when seller configures price feeds
+    event PriceFeedsUpdated(address ethUsdFeed, address tokenUsdFeed);
 
     // sync look
     modifier nonReentrant() {
@@ -77,6 +105,23 @@ contract Auction is IERC721Receiver {
         currency = currency_;
         startingPrice = startingPrice_;
         endTime = endTime_;
+    }
+
+    modifier onlySeller() {
+        require(msg.sender == seller, "not seller");
+        _;
+    }
+
+    // Configure Chainlink price feeds for USD conversion.
+    // - For ETH auctions (currency == address(0)), set ethUsdFeed only and tokenUsdFeed can be zero.
+    // - For ERC20 auctions, set tokenUsdFeed to that token's USD feed. ethUsdFeed is optional.
+    function setPriceFeeds(
+        address ethUsdFeed_,
+        address tokenUsdFeed_
+    ) external onlySeller {
+        ethUsdFeed = ethUsdFeed_;
+        tokenUsdFeed = tokenUsdFeed_;
+        emit PriceFeedsUpdated(ethUsdFeed_, tokenUsdFeed_);
     }
 
     // ERC-721 标准中的安全转移回调函数。
@@ -186,6 +231,61 @@ contract Auction is IERC721Receiver {
         }
 
         emit AuctionEnded(highestBidder, highestBid);
+    }
+
+    // -------- Price conversion helpers (USD) --------
+    // Returns (amountInUsd, usdDecimals), where usdDecimals equals the Chainlink feed decimals.
+    function amountInUsd(
+        uint256 amount
+    ) external view returns (uint256, uint8) {
+        (uint256 price, uint8 usdDec) = _priceAndDecimalsForCurrency();
+
+        uint8 curDec = _currencyDecimals();
+        // amountInUsd = amount * price / 10**curDec
+        // Ensure non-negative price from feed
+        require(price > 0, "price");
+        // price
+        // unit：WEI，not ether
+        // amount : 10^18
+        // price : 2_500 * 10^8
+        uint256 scaled = amount * price;
+        // scaled
+        // (1 * 2_500 * 10^8) / 10^18
+        uint256 usdAmount = scaled / (10 ** curDec);
+        return (usdAmount, usdDec);
+    }
+
+    // Returns (highestBidInUsd, usdDecimals). Reverts if no bids or feeds unset.
+    function currentHighestBidInUsd() external view returns (uint256, uint8) {
+        require(highestBid > 0, "no bid");
+        return this.amountInUsd(highestBid);
+    }
+
+    // Internal: resolve appropriate feed and standardized price as unsigned with its decimals.
+    function _priceAndDecimalsForCurrency()
+        internal
+        view
+        returns (uint256, uint8)
+    {
+        address feed;
+        if (currency == address(0)) {
+            feed = ethUsdFeed;
+        } else {
+            feed = tokenUsdFeed;
+        }
+        require(feed != address(0), "feed not set");
+
+        (, int256 answer, , uint256 updatedAt, ) = AggregatorV3Interface(feed)
+            .latestRoundData();
+        require(answer > 0, "invalid price");
+        require(updatedAt > 0, "stale");
+        uint8 d = AggregatorV3Interface(feed).decimals();
+        return (uint256(answer), d);
+    }
+
+    function _currencyDecimals() internal view returns (uint8) {
+        if (currency == address(0)) return 18; // ETH
+        return IERC20MetadataMinimal(currency).decimals();
     }
 
     // “如果别人直接往这个拍卖合约打 ETH，而不是通过 bid() 调用，也不要拒绝。”

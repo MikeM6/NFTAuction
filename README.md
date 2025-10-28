@@ -55,3 +55,21 @@ After setting the variable, you can run the deployment with the Sepolia network:
 ```shell
 npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
 ```
+
+## Chainlink USD Conversion (Auction)
+
+The `Auction` contract now supports optional Chainlink Data Feeds to convert bids (ETH or ERC20) into USD for easier comparison.
+
+- Configure feeds once per auction via the seller-only function:
+
+  - `setPriceFeeds(address ethUsdFeed, address tokenUsdFeed)`
+    - For ETH auctions (`currency == address(0)`): set `ethUsdFeed` and pass zero for `tokenUsdFeed`.
+    - For ERC20 auctions: set `tokenUsdFeed` to the token/USD feed. `ethUsdFeed` is optional.
+
+- Read-only helpers for conversion:
+  - `amountInUsd(uint256 amount) returns (uint256 usdAmount, uint8 usdDecimals)`
+  - `currentHighestBidInUsd() returns (uint256 usdAmount, uint8 usdDecimals)`
+
+Notes
+- `usdDecimals` is the decimals of the associated Chainlink feed (commonly 8). The returned `usdAmount` uses these decimals.
+- Make sure you use the correct feed addresses for your network from Chainlink’s official docs.
