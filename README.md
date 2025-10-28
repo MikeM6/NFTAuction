@@ -73,3 +73,25 @@ The `Auction` contract now supports optional Chainlink Data Feeds to convert bid
 Notes
 - `usdDecimals` is the decimals of the associated Chainlink feed (commonly 8). The returned `usdAmount` uses these decimals.
 - Make sure you use the correct feed addresses for your network from Chainlink’s official docs.
+
+## Upgradeable Contracts (UUPS & Transparent)
+
+Upgradeable versions of the Auction and Factory contracts are included:
+
+- UUPS pattern
+  - `contracts/upgradeable/AuctionUUPS.sol`
+  - `contracts/upgradeable/AuctionFactoryUUPS.sol`
+- Transparent pattern
+  - `contracts/upgradeable/AuctionTransparent.sol`
+  - `contracts/upgradeable/AuctionFactoryTransparent.sol`
+
+Deploy helpers (viem-based):
+
+- UUPS proxies via `ERC1967Proxy`: `scripts/deploy_uups.ts`
+- Transparent proxies with `ProxyAdmin`: `scripts/deploy_transparent.ts`
+
+Tips
+- Upgradeable contracts use `initialize(...)` instead of constructors.
+- UUPS upgrades require `onlyOwner` authorization in `_authorizeUpgrade`.
+- Transparent upgrades are controlled by `ProxyAdmin`.
+- The original non-upgradeable `Auction.sol` and `AuctionFactory.sol` remain unchanged for existing tests.

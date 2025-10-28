@@ -1,5 +1,5 @@
 // hardhat.config.ts (Hardhat 3+)
-import "@nomicfoundation/hardhat-toolbox-viem"; // Hardhat 3 + viem 工具箱
+import "@nomicfoundation/hardhat-toolbox-viem"; // Hardhat 3 + viem 工具
 import hardhatNodeTestRunner from "@nomicfoundation/hardhat-node-test-runner";
 import hardhatViem from "@nomicfoundation/hardhat-viem";
 import hardhatViemAssertions from "@nomicfoundation/hardhat-viem-assertions";
@@ -23,7 +23,7 @@ export default {
       chainId: 31337,
     },
 
-    // 连接到本机已启动的节点（如 npx hardhat node / Anvil）
+    // 连接到本机已启动的节点（npx hardhat node / Anvil）
     localhost: {
       type: "http",
       chainType: "l1",

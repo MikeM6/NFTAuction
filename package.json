@@ -1,35 +1,34 @@
 {
-    "name":  "nftauction",
-    "version":  "1.0.0",
-    "description":  "",
-    "main":  "index.js",
-    "scripts":  {
-                    "test":  "hardhat test"
-                },
-    "repository":  {
-                       "type":  "git",
-                       "url":  "git+https://github.com/MikeM6/NFTAuction.git"
-                   },
-    "keywords":  [
-
-                 ],
-    "author":  "",
-    "license":  "ISC",
-    "bugs":  {
-                 "url":  "https://github.com/MikeM6/NFTAuction/issues"
-             },
-    "homepage":  "https://github.com/MikeM6/NFTAuction#readme",
-    "devDependencies":  {
-                            "@nomicfoundation/hardhat-ignition":  "^3.0.3",
-                            "@nomicfoundation/hardhat-toolbox-viem":  "^5.0.0",
-                            "@types/node":  "^22.18.12",
-                            "forge-std":  "github:foundry-rs/forge-std#v1.9.4",
-                            "hardhat":  "^3.0.9",
-                            "typescript":  "~5.8.0",
-                            "viem":  "^2.38.4"
-                        },
-    "type":  "module",
-    "dependencies":  {
-                         "@openzeppelin/contracts":  "^5.0.2"
-                     }
+    "name": "nftauction",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "scripts": {
+        "test": "hardhat test"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/MikeM6/NFTAuction.git"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/MikeM6/NFTAuction/issues"
+    },
+    "homepage": "https://github.com/MikeM6/NFTAuction#readme",
+    "devDependencies": {
+        "@nomicfoundation/hardhat-ignition": "^3.0.3",
+        "@nomicfoundation/hardhat-toolbox-viem": "^5.0.0",
+        "@types/node": "^22.18.12",
+        "forge-std": "github:foundry-rs/forge-std#v1.9.4",
+        "hardhat": "^3.0.9",
+        "typescript": "~5.8.0",
+        "viem": "^2.38.4"
+    },
+    "type": "module",
+    "dependencies": {
+        "@openzeppelin/contracts": "^5.0.2",
+        "@openzeppelin/contracts-upgradeable": "^5.4.0"
+    }
 }
