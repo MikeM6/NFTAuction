@@ -36,9 +36,13 @@ export default {
     sepolia: {
       type: "http",
       chainType: "l1",
-      url: configVariable("SEPOLIA_RPC_URL"),
-      accounts: [configVariable("SEPOLIA_PRIVATE_KEY")],
+      url: process.env.SEPOLIA_RPC_URL!,
+      accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 11155111,
+    }, verify: {
+      etherscan: {
+        apiKey: process.env.ETHERSCAN_API_KEY || "",
+      },
     },
   },
 
