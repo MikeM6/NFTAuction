@@ -195,6 +195,36 @@ contract Auction is IERC721Receiver {
         highestBidder = msg.sender;
         emit BidPlaced(msg.sender, amount);
     }
+    // Allows third parties (e.g., cross-chain gateways) to place a bid on behalf of a beneficiary.
+    // Funds are pulled from msg.sender, but the highestBidder is set to `beneficiary`.
+    function bidERC20For(
+        address beneficiary,
+        uint256 amount
+    ) external nonReentrant {
+        require(currency != address(0), "currency == ETH");
+        require(beneficiary != address(0), "beneficiary");
+        require(block.timestamp < endTime, "ended time");
+        require(amount >= startingPrice && amount > highestBid, "low bid");
+        // pull funds from caller (gateway/escrow)
+        require(
+            IERC20Minimal(currency).transferFrom(
+                msg.sender,
+                address(this),
+                amount
+            ),
+            "pull fail"
+        );
+        // refund previous highest
+        if (highestBidder != address(0)) {
+            require(
+                IERC20Minimal(currency).transfer(highestBidder, highestBid),
+                "refund fail"
+            );
+        }
+        highestBid = amount;
+        highestBidder = beneficiary;
+        emit BidPlaced(beneficiary, amount);
+    }
 
     function end() external nonReentrant {
         require(!ended, "already ended");
