@@ -11,7 +11,7 @@ async function main() {
   console.log("AuctionUUPS impl:", auctionImpl.address);
 
   // Encode initializer
-  const nft = "0x0000000000000000000000000000000000000001"; // placeholder
+  const nft = "0x0ada5d29a30dc36f0fa3705fa0dd4c25ed023e1a"; // placeholder
   const tokenId = 1n;
   const currency = "0x0000000000000000000000000000000000000000"; // ETH
   const startingPrice = 0n;

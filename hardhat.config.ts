@@ -1,5 +1,6 @@
-// hardhat.config.ts (Hardhat 3+)
-import "@nomicfoundation/hardhat-toolbox-viem"; // Hardhat 3 + viem 工具
+﻿// hardhat.config.ts (Hardhat 3+)
+import "dotenv/config"; ``
+import "@nomicfoundation/hardhat-toolbox-viem"; // Hardhat 3 + viem 
 import hardhatNodeTestRunner from "@nomicfoundation/hardhat-node-test-runner";
 import hardhatViem from "@nomicfoundation/hardhat-viem";
 import hardhatViemAssertions from "@nomicfoundation/hardhat-viem-assertions";
@@ -39,10 +40,12 @@ export default {
       url: process.env.SEPOLIA_RPC_URL!,
       accounts: process.env.PRIVATE_KEY ? [process.env.PRIVATE_KEY] : [],
       chainId: 11155111,
-    }, verify: {
-      etherscan: {
-        apiKey: process.env.ETHERSCAN_API_KEY || "",
-      },
+    },
+  },
+
+  verify: {
+    etherscan: {
+      apiKey: process.env.ETHERSCAN_API_KEY || "",
     },
   },
 
@@ -61,3 +64,5 @@ export default {
     mocha: { timeout: 200_000 },
   },
 };
+
+

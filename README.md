@@ -1,97 +1,159 @@
-# Sample Hardhat 3 Beta Project (`node:test` and `viem`)
+﻿NFTAuction
 
-This project showcases a Hardhat 3 Beta project using the native Node.js test runner (`node:test`) and the `viem` library for Ethereum interactions.
+基于 Hardhat 3 + viem 的 NFT 拍卖合约与脚本合集，支持：
 
-To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+- 单次拍卖合约（支持 ETH/指定 ERC20 出价，安全退款与收款）
+- 工厂创建与管理拍卖
+- 可升级版本（UUPS、Transparent 两种模式）
+- 可选 Chainlink 价格喂价（USD 估值辅助）
+- 跨链 CCIP 出价接收（ERC20 跨链到目标链并代为出价）
+- 配套部署、竞拍、结束、铸造等脚本
 
-## Project Overview
+项目结构
 
-This example project includes:
+- `contracts/`
+  - `Auction.sol`：基础拍卖（非升级），ETH/ERC20 出价、退款、结束；可选 Chainlink 喂价用于 USD 估值。
+  - `AuctionFactory.sol`：创建 `Auction` 并将 NFT 安全转入；提供 `getAuction(nft, tokenId)` 与 `allAuctions`。
+  - `upgradeable/`
+    - `AuctionUUPS.sol`：UUPS 可升级版拍卖（OZ UUPS + OwnableUpgradeable）。
+    - `AuctionTransparent.sol`：Transparent 代理兼容的拍卖（无 UUPS 钩子）。
+    - `AuctionFactoryUUPS.sol`：UUPS 可升级版工厂，支持结束后重复上架（含 `clearIfEnded`）。
+    - `AuctionFactoryTransparent.sol`：Transparent 兼容版工厂。
+  - `ccip/CrossChainBidReceiver.sol`：CCIP 接收器，接收跨链 ERC20 并代本地受益人对拍卖 `bidERC20For`。
+  - `vendor/Proxies.sol`、`vendor/ProxyWrappers.sol`：引入/包装 OZ 代理（`ERC1967Proxy`、`TransparentUpgradeableProxy`、`ProxyAdmin`）便于脚本部署。
+  - `MyNFT.sol`：ERC721 示例，支持 `mint`。`TestERC20.sol`：ERC20 示例，支持 `mint`。
+- `scripts/`（Hardhat 3 + viem）
+  - 部署：`deploy_factory.ts`、`deploy_mynft.ts`、`deploy_erc20.ts`、`deploy_uups.ts`、`deploy_transparent.ts`
+  - 升级：`upgrade_factory_uups.ts`、`upgrade_factory_transparent.ts`
+  - 业务：`create_auction.ts`、`bid_eth.ts`、`bid_erc20.ts`、`end_auction.ts`、`mint.ts`、`set_price_feeds.ts`
+- 其它
+  - `hardhat.config.ts`：Hardhat 3 配置（`dev`/`localhost`/`sepolia` 网络示例，Etherscan 验证配置）
+  - `test/`：拍卖与价格逻辑测试
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using [`node:test`](nodejs.org/api/test.html), the new Node.js native test runner, and [`viem`](https://viem.sh/).
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+功能说明
 
-## Usage
+- 拍卖（`Auction` / `AuctionUUPS` / `AuctionTransparent`）
+  - 出价方式
+    - ETH 出价：`bid()`；若有上一位最高出价则自动退款
+    - ERC20 出价：`bidERC20(uint256)`；内部 `transferFrom` 拉取，若有上一位最高出价则原路退还
+  - 代投：`bidERC20For(address beneficiary, uint256 amount)`（如由跨链接收器发起）
+  - 结束：`end()` 到期后任何人可调用；若有人中标则转 NFT 给中标者并向卖家结算，否则退回 NFT
+  - 价格喂价（可选）：卖家 `setPriceFeeds(ethUsdFeed, tokenUsdFeed)`；查询 `amountInUsd`、`currentHighestBidInUsd`
+- 工厂（`AuctionFactory*`）
+  - `createAuction(nft, tokenId, currency, startingPrice, duration)` 创建拍卖
+    - 需要调用者当前拥有该 NFT；创建时会 `safeTransferFrom` 将 NFT 转入新拍卖合约
+    - 非升级版：同一 `nft+tokenId` 仅允许一个活动拍卖
+    - 升级版：允许结束后重新上架（`clearIfEnded` 清理映射再创建）
+  - 查询：`getAuction(nft, tokenId)`、`allAuctionsLength()`
+- 跨链 CCIP（`CrossChainBidReceiver`）
+  - 仅接受 allowlist 中“源链 + 源地址”的 CCIP Router 消息
+  - 要求消息附带的 ERC20 与拍卖 `currency()` 完全一致；随后 `approve + bidERC20For(localRecipient, amount)`
+  - 管理：`setAllowedSender`、`setOwner`、`recoverERC20`
 
-### Running Tests
+环境准备
 
-To run all the tests in the project, execute the following command:
+- Node.js 18+、npm 10+
+- 安装：`npm i`
+- `.env`（可选）
+  - `PRIVATE_KEY`：部署账户私钥
+  - `SEPOLIA_RPC_URL`：Sepolia RPC
+  - `ETHERSCAN_API_KEY`：Etherscan 验证（可选）
 
-```shell
-npx hardhat test
-```
+编译与测试
 
-You can also selectively run the Solidity or `node:test` tests:
+- 编译：`npx hardhat compile`
+- 测试：`npm test` 或 `npx hardhat test`
 
-```shell
-npx hardhat test solidity
-npx hardhat test nodejs
-```
+部署与使用（示例）
 
-### Make a deployment to Sepolia
+- 命令基于 PowerShell，`--network sepolia` 或 `--network localhost` 视配置而定
 
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
+1. 部署示例 NFT / ERC20
 
-To run the deployment to a local chain:
+- 部署 NFT：`npx hardhat run scripts/deploy_mynft.ts --network sepolia`
+  - 可选：`--name MyNFT --symbol MNFT` 或设置 `NFT_NAME` / `NFT_SYMBOL`
+- 部署 ERC20：`npx hardhat run scripts/deploy_erc20.ts --network sepolia`
+  - 可选：`--name TestToken --symbol TT` 或设置 `ERC20_NAME` / `ERC20_SYMBOL`
 
-```shell
-npx hardhat ignition deploy ignition/modules/Counter.ts
-```
+2. 铸造（可选）
 
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
+- 示例：
+  - `$env:NFT_ADDRESS="0x...";`
+  - `$env:ERC20_ADDRESS="0x...";`
+  - `$env:MINT_TO="0x...";`
+  - `$env:ERC20_MINT_AMOUNT="1000";`
+  - `npx hardhat run scripts/mint.ts --network sepolia`
 
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
+3. 部署工厂
 
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
+- 非升级版：`npx hardhat run scripts/deploy_factory.ts --network sepolia`
+- 可升级（示例脚本，含占位参数，按需修改）
+  - UUPS：`npx hardhat run scripts/deploy_uups.ts --network sepolia`
+  - Transparent：`npx hardhat run scripts/deploy_transparent.ts --network sepolia`
 
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
-```
+4. 创建拍卖前准备
 
-After setting the variable, you can run the deployment with the Sepolia network:
+- 在钱包或交互工具中授权工厂可转移 NFT（以下任选一）
+  - `ERC721.approve(factory, tokenId)`
+  - `ERC721.setApprovalForAll(factory, true)`
 
-```shell
-npx hardhat ignition deploy --network sepolia ignition/modules/Counter.ts
-```
+5. 创建拍卖
 
-## Chainlink USD Conversion (Auction)
+- `$env:FACTORY_ADDRESS="0x...";`
+- `$env:NFT_ADDRESS="0x...";`
+- `$env:TOKEN_ID="1";`
+- `# ETH 拍卖省略 CURRENCY_ADDRESS（或填 0x00..00），ERC20 拍卖设置为代币地址`
+- `$env:CURRENCY_ADDRESS="0x0000000000000000000000000000000000000000";`
+- `$env:STARTING_PRICE_WEI="0";`
+- `$env:DURATION_SECONDS="3600";`
+- `npx hardhat run scripts/create_auction.ts --network sepolia`
 
-The `Auction` contract now supports optional Chainlink Data Feeds to convert bids (ETH or ERC20) into USD for easier comparison.
+6. 竞价
 
-- Configure feeds once per auction via the seller-only function:
+- ETH：
+  - `$env:AUCTION_ADDRESS="0x...";`
+  - `$env:BID_ETH="0.05";`
+  - `npx hardhat run scripts/bid_eth.ts --network sepolia`
+- ERC20：
+  - `$env:AUCTION_ADDRESS="0x...";`
+  - `$env:ERC20_ADDRESS="0x...";`
+  - `$env:BID_AMOUNT="100";`
+  - `npx hardhat run scripts/bid_erc20.ts --network sepolia`
 
-  - `setPriceFeeds(address ethUsdFeed, address tokenUsdFeed)`
-    - For ETH auctions (`currency == address(0)`): set `ethUsdFeed` and pass zero for `tokenUsdFeed`.
-    - For ERC20 auctions: set `tokenUsdFeed` to the token/USD feed. `ethUsdFeed` is optional.
+7. 结束拍卖
 
-- Read-only helpers for conversion:
-  - `amountInUsd(uint256 amount) returns (uint256 usdAmount, uint8 usdDecimals)`
-  - `currentHighestBidInUsd() returns (uint256 usdAmount, uint8 usdDecimals)`
+- `$env:AUCTION_ADDRESS="0x...";`
+- `npx hardhat run scripts/end_auction.ts --network sepolia`
 
-Notes
-- `usdDecimals` is the decimals of the associated Chainlink feed (commonly 8). The returned `usdAmount` uses these decimals.
-- Make sure you use the correct feed addresses for your network from Chainlink’s official docs.
+8. 设置价格喂价（可选）
 
-## Upgradeable Contracts (UUPS & Transparent)
+- `$env:AUCTION_ADDRESS="0x...";`
+- `$env:ETH_USD_FEED="0x...";`
+- `$env:TOKEN_USD_FEED="0x...";`
+- `npx hardhat run scripts/set_price_feeds.ts --network sepolia`
 
-Upgradeable versions of the Auction and Factory contracts are included:
+升级流程（可选）
 
-- UUPS pattern
-  - `contracts/upgradeable/AuctionUUPS.sol`
-  - `contracts/upgradeable/AuctionFactoryUUPS.sol`
-- Transparent pattern
-  - `contracts/upgradeable/AuctionTransparent.sol`
-  - `contracts/upgradeable/AuctionFactoryTransparent.sol`
+- UUPS 工厂升级：
+  - `$env:FACTORY_PROXY="0x...";`
+  - `npx hardhat run scripts/upgrade_factory_uups.ts --network sepolia`
+  - 部署新实现并对代理 `upgradeTo(newImpl)`，随后读取 `version()` 校验
+- Transparent 工厂升级：
+  - `$env:PROXY_ADMIN="0x...";`
+  - `$env:FACTORY_PROXY="0x...";`
+  - `npx hardhat run scripts/upgrade_factory_transparent.ts --network sepolia`
+  - 通过 `ProxyAdmin.upgrade(proxy, newImpl)` 执行升级并读取 `version()` 校验
 
-Deploy helpers (viem-based):
+网络配置说明
 
-- UUPS proxies via `ERC1967Proxy`: `scripts/deploy_uups.ts`
-- Transparent proxies with `ProxyAdmin`: `scripts/deploy_transparent.ts`
+- `hardhat.config.ts` 已示例：
+  - `dev`：内置模拟链（Hardhat v3 EDR）
+  - `localhost`：连接本地节点（如 Anvil/Hardhat node）
+  - `sepolia`：从 `.env` 读取 `SEPOLIA_RPC_URL` / `PRIVATE_KEY`
+  - 验证：`ETHERSCAN_API_KEY`（可选）
 
-Tips
-- Upgradeable contracts use `initialize(...)` instead of constructors.
-- UUPS upgrades require `onlyOwner` authorization in `_authorizeUpgrade`.
-- Transparent upgrades are controlled by `ProxyAdmin`.
-- The original non-upgradeable `Auction.sol` and `AuctionFactory.sol` remain unchanged for existing tests.
+常见问题
+
+- 创建拍卖前未授权工厂转移 NFT → 在钱包中对工厂地址 `approve` 或 `setApprovalForAll`
+- ERC20 出价失败 → 检查余额、`approve` 数量、拍卖 `currency` 是否与出价代币一致
+- USD 估值函数报错 → 需先设置对应 Chainlink 喂价地址
