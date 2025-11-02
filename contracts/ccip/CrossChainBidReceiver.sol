@@ -111,7 +111,9 @@ contract CrossChainBidReceiver is IAny2EVMMessageReceiver {
         // 解码消息体
         (
             address auctionAddr,
+            // 负载的token类型
             address token,
+            // 负载的token amount
             uint256 amount,
             address localRecipient
         ) = abi.decode(message.data, (address, address, uint256, address));

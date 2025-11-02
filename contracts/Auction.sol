@@ -52,7 +52,6 @@ interface IERC721Receiver {
 
 contract Auction is IERC721Receiver {
     address public immutable seller;
-    //
     address public immutable nft;
     // auction token now.
     uint256 public immutable tokenId;
@@ -174,7 +173,9 @@ contract Auction is IERC721Receiver {
         require(amount >= startingPrice && amount > highestBid, "low bid");
 
         // pull funds from bidder
+        //
         require(
+            // currency将合约调用者的CRC20代币转到本合约
             IERC20Minimal(currency).transferFrom(
                 msg.sender,
                 address(this),
@@ -298,6 +299,7 @@ contract Auction is IERC721Receiver {
         returns (uint256, uint8)
     {
         address feed;
+        // 货币类型
         if (currency == address(0)) {
             feed = ethUsdFeed;
         } else {
@@ -305,10 +307,15 @@ contract Auction is IERC721Receiver {
         }
         require(feed != address(0), "feed not set");
 
+        // feed类型的价格
         (, int256 answer, , uint256 updatedAt, ) = AggregatorV3Interface(feed)
             .latestRoundData();
+
+        // 数据合法性和新鲜度
         require(answer > 0, "invalid price");
         require(updatedAt > 0, "stale");
+
+        // 获取小数位
         uint8 d = AggregatorV3Interface(feed).decimals();
         return (uint256(answer), d);
     }

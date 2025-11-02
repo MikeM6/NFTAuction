@@ -36,6 +36,7 @@ describe("Cross-chain Auction via CCIP (ERC20)", async function () {
         const receiver = await viem.deployContract("CrossChainBidReceiver", [routerLike.account.address]);
         // Allow a source sender (bytes-encoded) from a given chain selector
         const chainSelector = 16015286601757825753n; // example selector (Ethereum Sepolia)
+        // 原链上的地址ABI编码
         const sourceSenderBytes = encodeAbiParameters(
             parseAbiParameters("address"),
             [sourceSender.account.address]

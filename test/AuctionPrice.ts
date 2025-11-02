@@ -1,12 +1,20 @@
 import assert from "node:assert/strict";
-import { describe, it } from "node:test";
+import { describe, it, before } from "node:test";
 
 import { network } from "hardhat";
 
-describe("Auction USD conversion (Chainlink)", async function () {
-  const { viem } = await network.connect();
-  const publicClient = await viem.getPublicClient();
-  const [seller, bidder] = await viem.getWalletClients();
+describe("Auction USD conversion (Chainlink)", function () {
+  let viem: any;
+  let publicClient: any;
+  let seller: any;
+  let bidder: any;
+
+  before(async () => {
+    const conn = await network.connect();
+    viem = conn.viem;
+    publicClient = await viem.getPublicClient();
+    [seller, bidder] = await viem.getWalletClients();
+  });
 
   it("ETH amountInUsd and currentHighestBidInUsd", async function () {
     // Deploy NFT and mint
