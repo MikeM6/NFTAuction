@@ -157,3 +157,20 @@
 - 创建拍卖前未授权工厂转移 NFT → 在钱包中对工厂地址 `approve` 或 `setApprovalForAll`
 - ERC20 出价失败 → 检查余额、`approve` 数量、拍卖 `currency` 是否与出价代币一致
 - USD 估值函数报错 → 需先设置对应 Chainlink 喂价地址
+- TestERC20**合约地址**：0x114f73a8857b93fdd16722cce754f6de9ce7c391
+- MyNFT**合约地址**：0xfedbe87c42ba210021cedfde2a657885418a7f0a
+- AcutionFactory**合约地址**：0x52107ff552c5b44f19dc8e08c6157ca8c7a67e14
+- Auction1 合约地址：0x49A389af1C6aAB805AfF9f6d0e690eAC8548297A
+- Auction2 合约地址：0xa730B3007945AD0D1279bAD36Ec7433E38786eaE
+- Auction3 合约地址：0xc289f946CF5659a8f0073CA4E53Ff17b95592B4d
+- MockAggregatorV3 ether 地址：0x1f1fAAc2f0fc637222A2362A610D55923A3081D1
+- MockAggregatorV3 erc20 地址：0x0A8FF2ED5Ca50C6d8fe8710e63cA2A041a8a6aC3
+- 0 地址：0x0000000000000000000000000000000000000000
+- AuctionUUPS 合约地址：0x64b22D5975caAd2a90DFf1cb14FFc63c0Cb945ff
+- ERC1967 代理合约地址：0x491907fa821D50c0756af277fA2eEa7313548Fb8
+- ERC1967 绑定 AuctionUUPS；
+- AuctionUUPS2 合约地址：0x6b853f38411C4dCccB7BE1a810bbEac9fF70D1f5
+- AuctionTransparent：0x47780e745e1023f0b0391ED195e373c810D12348
+- Transparent：0x7ea47042F9dF795e52002f6c4F2196173ECFC2F5
+- admin 是 bidder1：0x11979f452E917d35849894717E6fA38123bD812F
+- TransparentV2：0xf895b91D0Ab0C0aA83Ee1467d69E7A0c52143abd
